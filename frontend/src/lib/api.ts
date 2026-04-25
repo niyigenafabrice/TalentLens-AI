@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api` : 'http://localhost:5000/api',
 });
 
 export const jobsAPI = {
@@ -12,12 +12,12 @@ export const jobsAPI = {
 
 export const applicantsAPI = {
   getAll: (jobId?: string) => API.get('/applicants', { params: { jobId } }),
-  getOne: (id: string) => API.get(/applicants/),
+  getOne: (id: string) => API.get(`/applicants/${id}`),
 };
 
 export const screeningAPI = {
-  run: (jobId: string, applicantId: string) => API.post('/screening/run', { jobId, applicantId }),
-  getResults: (jobId: string) => API.get(/screening/results/),
+  run: (jobId: string, applicantId: string) => API.post('/screening/screen', { jobId, applicantId }),
+  getResults: (jobId: string) => API.get(`/screening/${jobId}`),
 };
 
 export const analyticsAPI = {
@@ -30,5 +30,3 @@ export const jobStatsAPI = {
 };
 
 export default API;
-
-
