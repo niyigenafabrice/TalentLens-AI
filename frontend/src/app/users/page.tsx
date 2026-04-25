@@ -139,7 +139,7 @@ export default function UsersPage() {
     setModalMode("add");
   };
   const openEdit = (u: User) => {
-    setForm({ name: u.name, email: u.email, role: u.role, status: u.status });
+    setForm({ name: u.name, email: u.email, role: u.role, status: u.status as "active" });
     setEditId(u._id);
     setError("");
     setModalMode("edit");
@@ -1090,3 +1090,4 @@ export default function UsersPage() {
     </div>
   );
 }
+
