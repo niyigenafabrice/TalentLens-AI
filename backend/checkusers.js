@@ -1,0 +1,1 @@
+const mongoose = require('mongoose'); require('dotenv').config(); mongoose.connect(process.env.MONGODB_URI).then(async () => { const docs = await mongoose.connection.collection('users').find({}).toArray(); console.log(JSON.stringify(docs.map(d => ({name: d.name, email: d.email, role: d.role})), null, 2)); process.exit(); });

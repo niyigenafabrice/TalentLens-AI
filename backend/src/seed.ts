@@ -1,0 +1,310 @@
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import Applicant from "./models/applicant.model";
+import Job from "./models/job.model";
+
+dotenv.config();
+
+const seedData = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI as string);
+    console.log("MongoDB Connected!");
+
+    // Create a sample job first
+    const job = await Job.create({
+      title: "Senior Software Engineer",
+      description:
+        "We are looking for an experienced software engineer to join our team.",
+      requiredSkills: ["React", "Node.js", "MongoDB", "TypeScript"],
+      experienceYears: 3,
+      educationLevel: "BSc Computer Science",
+      location: "Kigali, Rwanda",
+    });
+
+    console.log("Job created!");
+
+    // Create 20 dummy candidates
+    const candidates = [
+      {
+        name: "Jean Pierre Habimana",
+        email: "jean.pierre@gmail.com",
+        phone: "+250781234567",
+        skills: ["React", "Node.js", "MongoDB", "TypeScript", "Python"],
+        experienceYears: 5,
+        educationLevel: "BSc Computer Science",
+        currentPosition: "Senior Developer at MTN Rwanda",
+        location: "Kigali, Rwanda",
+        summary:
+          "Experienced full stack developer with 5 years of experience in React and Node.js",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Amina Uwimana",
+        email: "amina.uwimana@gmail.com",
+        phone: "+250782345678",
+        skills: ["React", "TypeScript", "CSS", "Redux"],
+        experienceYears: 3,
+        educationLevel: "BSc Software Engineering",
+        currentPosition: "Frontend Developer at Andela",
+        location: "Kigali, Rwanda",
+        summary:
+          "Passionate frontend developer specializing in React and TypeScript",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Eric Nkurunziza",
+        email: "eric.nkurunziza@gmail.com",
+        phone: "+250783456789",
+        skills: ["Node.js", "MongoDB", "Express", "Python", "Docker"],
+        experienceYears: 4,
+        educationLevel: "BSc Computer Science",
+        currentPosition: "Backend Engineer at Irembo",
+        location: "Kigali, Rwanda",
+        summary:
+          "Backend engineer with strong experience in Node.js and cloud technologies",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Marie Claire Uwase",
+        email: "marie.uwase@gmail.com",
+        phone: "+250784567890",
+        skills: ["React", "Node.js", "PostgreSQL", "GraphQL"],
+        experienceYears: 2,
+        educationLevel: "BSc Information Technology",
+        currentPosition: "Junior Developer at RSwitch",
+        location: "Kigali, Rwanda",
+        summary:
+          "Junior developer eager to learn and grow in full stack development",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Patrick Mugisha",
+        email: "patrick.mugisha@gmail.com",
+        phone: "+250785678901",
+        skills: ["React", "Node.js", "MongoDB", "AWS", "TypeScript"],
+        experienceYears: 6,
+        educationLevel: "MSc Computer Science",
+        currentPosition: "Tech Lead at Equity Bank",
+        location: "Kigali, Rwanda",
+        summary:
+          "Tech lead with 6 years experience leading teams and building scalable systems",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Claudine Ishimwe",
+        email: "claudine.ishimwe@gmail.com",
+        phone: "+250786789012",
+        skills: ["Python", "Django", "React", "PostgreSQL"],
+        experienceYears: 3,
+        educationLevel: "BSc Computer Science",
+        currentPosition: "Full Stack Developer at BK Tech",
+        location: "Musanze, Rwanda",
+        summary: "Full stack developer with Python and React expertise",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "David Niyonzima",
+        email: "david.niyonzima@gmail.com",
+        phone: "+250787890123",
+        skills: ["Java", "Spring Boot", "React", "MySQL"],
+        experienceYears: 4,
+        educationLevel: "BSc Software Engineering",
+        currentPosition: "Software Engineer at Airtel Rwanda",
+        location: "Kigali, Rwanda",
+        summary: "Software engineer with Java and Spring Boot expertise",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Solange Mukamana",
+        email: "solange.mukamana@gmail.com",
+        phone: "+250788901234",
+        skills: ["React", "Vue.js", "Node.js", "MongoDB"],
+        experienceYears: 2,
+        educationLevel: "BSc Computer Science",
+        currentPosition: "Frontend Developer at Chekea",
+        location: "Kigali, Rwanda",
+        summary: "Creative frontend developer with React and Vue.js skills",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Innocent Habimana",
+        email: "innocent.habimana@gmail.com",
+        phone: "+250789012345",
+        skills: ["Node.js", "TypeScript", "MongoDB", "Redis", "Docker"],
+        experienceYears: 5,
+        educationLevel: "BSc Computer Science",
+        currentPosition: "Senior Backend Engineer at Zipline",
+        location: "Kigali, Rwanda",
+        summary:
+          "Senior backend engineer specializing in microservices and distributed systems",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Vestine Umutoniwase",
+        email: "vestine.umutoniwase@gmail.com",
+        phone: "+250780123456",
+        skills: ["React", "Node.js", "MongoDB", "TypeScript"],
+        experienceYears: 1,
+        educationLevel: "BSc Information Systems",
+        currentPosition: "Junior Developer at Kasha",
+        location: "Kigali, Rwanda",
+        summary: "Fresh graduate with strong React and Node.js fundamentals",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Alain Bizimana",
+        email: "alain.bizimana@gmail.com",
+        phone: "+250781234568",
+        skills: ["React", "Node.js", "AWS", "TypeScript", "MongoDB"],
+        experienceYears: 7,
+        educationLevel: "MSc Software Engineering",
+        currentPosition: "Engineering Manager at Andela",
+        location: "Kigali, Rwanda",
+        summary:
+          "Engineering manager with 7 years experience in full stack development",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Chance Uwingabire",
+        email: "chance.uwingabire@gmail.com",
+        phone: "+250782345679",
+        skills: ["Flutter", "React Native", "Node.js", "Firebase"],
+        experienceYears: 3,
+        educationLevel: "BSc Computer Science",
+        currentPosition: "Mobile Developer at SafeMotos",
+        location: "Kigali, Rwanda",
+        summary: "Mobile developer with Flutter and React Native expertise",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Fidele Nshimiyimana",
+        email: "fidele.nshimiyimana@gmail.com",
+        phone: "+250783456780",
+        skills: ["React", "Node.js", "MongoDB", "GraphQL", "TypeScript"],
+        experienceYears: 4,
+        educationLevel: "BSc Computer Science",
+        currentPosition: "Full Stack Developer at Urubuto",
+        location: "Huye, Rwanda",
+        summary: "Full stack developer with GraphQL and TypeScript expertise",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Grace Ineza",
+        email: "grace.ineza@gmail.com",
+        phone: "+250784567891",
+        skills: ["Python", "Machine Learning", "TensorFlow", "React"],
+        experienceYears: 3,
+        educationLevel: "MSc Data Science",
+        currentPosition: "AI Engineer at Rwanda AI Lab",
+        location: "Kigali, Rwanda",
+        summary: "AI engineer with machine learning and Python expertise",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Herve Niyomugabo",
+        email: "herve.niyomugabo@gmail.com",
+        phone: "+250785678902",
+        skills: ["React", "Node.js", "MongoDB", "Docker", "Kubernetes"],
+        experienceYears: 5,
+        educationLevel: "BSc Computer Science",
+        currentPosition: "DevOps Engineer at BRD",
+        location: "Kigali, Rwanda",
+        summary: "DevOps engineer with strong Docker and Kubernetes skills",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Josiane Mukeshimana",
+        email: "josiane.mukeshimana@gmail.com",
+        phone: "+250786789013",
+        skills: ["React", "TypeScript", "Node.js", "PostgreSQL"],
+        experienceYears: 2,
+        educationLevel: "BSc Software Engineering",
+        currentPosition: "Developer at HealthBridge Rwanda",
+        location: "Kigali, Rwanda",
+        summary:
+          "Developer with healthcare tech experience and React expertise",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Kevin Tuyishime",
+        email: "kevin.tuyishime@gmail.com",
+        phone: "+250787890124",
+        skills: ["Angular", "Node.js", "MongoDB", "TypeScript"],
+        experienceYears: 3,
+        educationLevel: "BSc Computer Science",
+        currentPosition: "Frontend Developer at RURA",
+        location: "Kigali, Rwanda",
+        summary: "Frontend developer with Angular and TypeScript expertise",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Laetitia Uwamariya",
+        email: "laetitia.uwamariya@gmail.com",
+        phone: "+250788901235",
+        skills: ["React", "Node.js", "MongoDB", "TypeScript", "Redux"],
+        experienceYears: 4,
+        educationLevel: "BSc Computer Science",
+        currentPosition: "Senior Developer at Inyarwanda",
+        location: "Kigali, Rwanda",
+        summary: "Senior developer with strong React and Redux expertise",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Maurice Ntaganda",
+        email: "maurice.ntaganda@gmail.com",
+        phone: "+250789012346",
+        skills: ["PHP", "Laravel", "React", "MySQL"],
+        experienceYears: 5,
+        educationLevel: "BSc Information Technology",
+        currentPosition: "Backend Developer at MINICT",
+        location: "Kigali, Rwanda",
+        summary: "Backend developer with PHP and Laravel expertise",
+        jobId: job._id,
+        source: "umurava",
+      },
+      {
+        name: "Nadine Uwamahoro",
+        email: "nadine.uwamahoro@gmail.com",
+        phone: "+250780123457",
+        skills: ["React", "Node.js", "MongoDB", "TypeScript", "AWS"],
+        experienceYears: 6,
+        educationLevel: "MSc Computer Science",
+        currentPosition: "Cloud Engineer at Amazon Web Services",
+        location: "Kigali, Rwanda",
+        summary: "Cloud engineer with AWS and full stack development expertise",
+        jobId: job._id,
+        source: "umurava",
+      },
+    ];
+
+    await Applicant.insertMany(candidates);
+    console.log("20 candidates added successfully!");
+    console.log(`Job ID: ${job._id}`);
+    console.log("Copy this Job ID for testing!");
+
+    process.exit(0);
+  } catch (error) {
+    console.error("Seeding failed:", error);
+    process.exit(1);
+  }
+};
+
+seedData();
