@@ -1,4 +1,4 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 
 const API = axios.create({
   baseURL: 'http://localhost:5000/api',
@@ -7,7 +7,7 @@ const API = axios.create({
 export const jobsAPI = {
   getAll: () => API.get('/jobs'),
   create: (data: any) => API.post('/jobs', data),
-  delete: (id: string) => API.delete(/jobs/),
+  delete: (id: string) => API.delete(`/jobs/${id}`),
 };
 
 export const applicantsAPI = {
@@ -30,3 +30,4 @@ export const jobStatsAPI = {
 };
 
 export default API;
+
