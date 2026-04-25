@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API = "http://localhost:5000/api";
+const API = "https://talentlens-ai-production.up.railway.app/api";
 
 export default function Home() {
   const [stats, setStats] = useState<any>(null);
@@ -631,7 +631,7 @@ export default function Home() {
                       <div
                         style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}
                       >
-                        {job.location} � {job.experienceYears}y exp
+                        {job.location} ? {job.experienceYears}y exp
                       </div>
                     </div>
                   </div>
@@ -687,3 +687,4 @@ export default function Home() {
     </div>
   );
 }
+

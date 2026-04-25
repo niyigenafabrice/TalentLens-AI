@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 
-const API = "http://localhost:5000/api";
+const API = "https://talentlens-ai-production.up.railway.app/api";
 
 const SKILLS_OPTIONS = [
   "React",
@@ -1240,3 +1240,4 @@ export default function ApplyPage() {
     </div>
   );
 }
+

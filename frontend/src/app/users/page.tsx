@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API = "http://localhost:5000/api";
+const API = "https://talentlens-ai-production.up.railway.app/api";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: "▣" },
@@ -1090,5 +1090,6 @@ export default function UsersPage() {
     </div>
   );
 }
+
 
 

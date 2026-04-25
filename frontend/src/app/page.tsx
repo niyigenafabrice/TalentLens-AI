@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useEffect } from "react";
 
 export default function LandingPage() {
@@ -112,7 +112,7 @@ export default function LandingPage() {
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 44, marginBottom: 16 }}>🎯</div>
+          <div style={{ fontSize: 44, marginBottom: 16 }}>??</div>
           <h2
             style={{
               fontSize: 22,
@@ -148,7 +148,7 @@ export default function LandingPage() {
               marginBottom: 12,
             }}
           >
-            Apply for a Job →
+            Apply for a Job ?
           </a>
           <a
             href="/login"
@@ -179,7 +179,7 @@ export default function LandingPage() {
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 44, marginBottom: 16 }}>🏢</div>
+          <div style={{ fontSize: 44, marginBottom: 16 }}>??</div>
           <h2
             style={{
               fontSize: 22,
@@ -215,7 +215,7 @@ export default function LandingPage() {
               border: "1.5px solid rgba(255,255,255,0.4)",
             }}
           >
-            HR Login →
+            HR Login ?
           </a>
         </div>
       </div>
@@ -223,8 +223,9 @@ export default function LandingPage() {
       <p
         style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 48 }}
       >
-        © 2025 TalentLens · Powered by AI
+        � 2025 TalentLens � Powered by AI
       </p>
     </div>
   );
 }
+

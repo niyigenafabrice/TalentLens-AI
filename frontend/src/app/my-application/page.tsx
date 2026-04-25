@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API = "http://localhost:5000/api";
+const API = "https://talentlens-ai-production.up.railway.app/api";
 
 const STEPS = [
   { key: "submitted", label: "Submitted", icon: "1" },
@@ -520,4 +520,5 @@ export default function MyApplicationPage() {
     </div>
   );
 }
+
 
