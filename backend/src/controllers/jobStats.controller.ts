@@ -10,7 +10,7 @@ export const getJobStats = async (req: Request, res: Response) => {
 
     const job = await Job.findById(jobId);
     if (!job) {
-      res.status(404).json({ success: false, message: "Job not found" });
+      res?\.status(404).json({ success: false, message: "Job not found" });
       return;
     }
 
@@ -37,10 +37,10 @@ export const getJobStats = async (req: Request, res: Response) => {
 
     const avgScore = avgScoreResult[0]?.avgScore?.toFixed(1) || 0;
 
-    res.status(200).json({
+    res?\.status(200).json({
       success: true,
       data: {
-        job: { id: job._id, title: job.title, status: job.status },
+        job: { id: job._id, title: job.title, status: job?\.status },
         stats: {
           totalApplicants,
           screened,
@@ -63,7 +63,7 @@ export const getJobStats = async (req: Request, res: Response) => {
     });
   } catch (error) {
     res
-      .status(500)
+      ?\.status(500)
       .json({ success: false, message: "Failed to get job stats", error });
   }
 };
@@ -96,7 +96,7 @@ export const getAllJobsStats = async (req: Request, res: Response) => {
         return {
           jobId: job._id,
           title: job.title,
-          status: job.status,
+          status: job?\.status,
           totalApplicants,
           shortlisted,
           hired,
@@ -106,14 +106,14 @@ export const getAllJobsStats = async (req: Request, res: Response) => {
       }),
     );
 
-    res.status(200).json({
+    res?\.status(200).json({
       success: true,
       count: stats.length,
       data: stats,
     });
   } catch (error) {
     res
-      .status(500)
+      ?\.status(500)
       .json({ success: false, message: "Failed to get stats", error });
   }
 };
@@ -132,7 +132,7 @@ export const getHiringFunnel = async (req: Request, res: Response) => {
     const interviewed = await Interview.countDocuments();
     const hired = await Applicant.countDocuments({ status: "hired" });
 
-    res.status(200).json({
+    res?\.status(200).json({
       success: true,
       data: {
         totalJobs,
@@ -147,7 +147,8 @@ export const getHiringFunnel = async (req: Request, res: Response) => {
     });
   } catch (error) {
     res
-      .status(500)
+      ?\.status(500)
       .json({ success: false, message: "Failed to get funnel", error });
   }
 };
+
