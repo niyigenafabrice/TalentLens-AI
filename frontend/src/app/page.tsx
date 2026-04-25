@@ -1,4 +1,4 @@
-"use client";
+ï»¿"use client";
 import { useEffect } from "react";
 
 export default function LandingPage() {
@@ -223,9 +223,10 @@ export default function LandingPage() {
       <p
         style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 48 }}
       >
-        © 2025 TalentLens · Powered by AI
+        ï¿½ 2025 TalentLens ï¿½ Powered by AI
       </p>
     </div>
   );
 }
+
 
