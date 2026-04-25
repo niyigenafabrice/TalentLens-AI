@@ -928,7 +928,7 @@ export default function UsersPage() {
                   {(["active", "inactive"] as const).map((s) => (
                     <button
                       key={s}
-                      onClick={() => setForm((f) => ({ ...f, status: s }))}
+                      onClick={() => setForm((f) => ({ ...f, status: s as "active" }))}
                       style={{
                         flex: 1,
                         padding: "10px 0",
@@ -1090,4 +1090,5 @@ export default function UsersPage() {
     </div>
   );
 }
+
 
