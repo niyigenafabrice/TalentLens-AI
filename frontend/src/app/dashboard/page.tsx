@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -42,14 +42,14 @@ export default function Home() {
   }, []);
 
   const navItems = [
-    { name: "Dashboard", href: "/", icon: "?" },
-    { name: "Jobs", href: "/jobs", icon: "?" },
-    { name: "Applicants", href: "/applicants", icon: "?" },
-    { name: "AI Screening", href: "/screening", icon: "?" },
-    { name: "Interviews", href: "/interviews", icon: "?" },
-    { name: "Pipeline", href: "/pipeline", icon: "?" },
-    { name: "Reports", href: "/reports", icon: "?" },
-    { name: "Users", href: "/users", icon: "?" },
+    { name: "Dashboard", href: "/" },
+    { name: "Jobs", href: "/jobs" },
+    { name: "Applicants", href: "/applicants" },
+    { name: "AI Screening", href: "/screening" },
+    { name: "Interviews", href: "/interviews" },
+    { name: "Pipeline", href: "/pipeline" },
+    { name: "Reports", href: "/reports" },
+    { name: "Users", href: "/users" },
   ];
 
   const statCards = [
@@ -224,7 +224,7 @@ export default function Home() {
                     : "3px solid transparent",
               }}
             >
-              <span style={{ fontSize: 16 }}>{item.icon}</span>
+              
               <span>{item.name}</span>
               {item.name === "Dashboard" && (
                 <span
@@ -421,8 +421,7 @@ export default function Home() {
                   fontSize: 18,
                 }}
               >
-                {["??", "??", "?", "?"][i]}
-              </div>
+                </div>
               <div
                 style={{
                   fontSize: 36,
@@ -584,7 +583,7 @@ export default function Home() {
                   textDecoration: "none",
                 }}
               >
-                View All ?
+                View All
               </a>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -613,10 +612,7 @@ export default function Home() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: 18,
-                      }}
-                    >
-                      ?
+                        fontSize: 18, }}>??
                     </div>
                     <div>
                       <div
@@ -631,7 +627,7 @@ export default function Home() {
                       <div
                         style={{ color: "#94a3b8", fontSize: 12, marginTop: 2 }}
                       >
-                        {job.location} ? {job.experienceYears}y exp
+                        {job.location} � {job.experienceYears}y exp
                       </div>
                     </div>
                   </div>
@@ -663,7 +659,7 @@ export default function Home() {
                         borderRadius: 8,
                       }}
                     >
-                      View ?
+                      View
                     </a>
                   </div>
                 </div>
@@ -676,7 +672,7 @@ export default function Home() {
                     color: "#94a3b8",
                   }}
                 >
-                  <div style={{ fontSize: 40, marginBottom: 8 }}>?</div>
+                  <div style={{ fontSize: 40, marginBottom: 8 }}>??</div>
                   <p style={{ fontWeight: 600 }}>No jobs posted yet</p>
                 </div>
               )}
@@ -687,4 +683,14 @@ export default function Home() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
 

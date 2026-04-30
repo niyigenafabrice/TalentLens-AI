@@ -245,7 +245,7 @@ export default function UsersPage() {
       style={{
         display: "flex",
         minHeight: "100vh",
-        background: "#f0f7ff",
+        background: "#f8faff",
         fontFamily: "'Segoe UI', system-ui, sans-serif",
       }}
     >
@@ -254,8 +254,7 @@ export default function UsersPage() {
         style={{
           width: 260,
           minHeight: "100vh",
-          background:
-            "linear-gradient(180deg, #075985 0%, #0369a1 50%, #0284c7 100%)",
+          background: "linear-gradient(180deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%)",
           position: "fixed",
           left: 0,
           top: 0,
@@ -1090,6 +1089,11 @@ export default function UsersPage() {
     </div>
   );
 }
+
+
+
+
+
 
 
 

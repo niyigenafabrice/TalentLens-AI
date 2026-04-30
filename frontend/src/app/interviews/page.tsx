@@ -249,7 +249,7 @@ export default function InterviewsPage() {
                     : "3px solid transparent",
               }}
             >
-              <span style={{ fontSize: 16 }}>{item.icon}</span>
+              
               <span>{item.name}</span>
             </a>
           ))}
@@ -1011,4 +1011,7 @@ export default function InterviewsPage() {
     </div>
   );
 }
+
+
+
 

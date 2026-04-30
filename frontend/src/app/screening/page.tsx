@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API = "https://talentlens-ai-production.up.railway.app/api";
+const API = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL + "/api" : "http://localhost:8080/api";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: "▣" },
@@ -207,7 +207,7 @@ export default function ScreeningPage() {
                     : "3px solid transparent",
               }}
             >
-              <span style={{ fontSize: 16 }}>{item.icon}</span>
+              
               <span>{item.name}</span>
             </a>
           ))}
@@ -1108,5 +1108,9 @@ export default function ScreeningPage() {
     </div>
   );
 }
+
+
+
+
 
 
