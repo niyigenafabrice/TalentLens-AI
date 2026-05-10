@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 
-const API = "https://talentlens-ai-production.up.railway.app/api";
+const API = "http://localhost:8080/api";
 
 const SKILLS_OPTIONS = [
   "React",
@@ -34,13 +34,8 @@ export default function ApplyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [customSkill, setCustomSkill] = useState("");
   const [cvFile, setCvFile] = useState<File | null>(null);
-  const [otherDocs, setOtherDocs] = useState<File[]>([]);
-  const [coverLetterFile, setCoverLetterFile] = useState<File | null>(null);
   const [dragOverCv, setDragOverCv] = useState(false);
-  const [dragOverCover, setDragOverCover] = useState(false);
   const cvInputRef = useRef<HTMLInputElement>(null);
-  const otherDocsInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     fullName: "",
@@ -51,7 +46,17 @@ export default function ApplyPage() {
     educationLevel: "",
     summary: "",
     skills: [] as string[],
+    githubUrl: "",
+    portfolioUrl: "",
+    certifications: [] as string[],
+    projects: [] as string[],
+    customEducation: "",
   });
+
+  const [certInput, setCertInput] = useState("");
+  const [parsing, setParsing] = useState(false);
+  const [parsedSuccess, setParsedSuccess] = useState(false);
+  const [projectInput, setProjectInput] = useState("");
 
   useEffect(() => {
     axios.get(API + "/jobs").then((r) => setJobs(r.data.data || []));
@@ -78,54 +83,53 @@ export default function ApplyPage() {
     setForm((f) => ({ ...f, skills: f.skills.filter((s) => s !== skill) }));
   };
 
-  const handleCvDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOverCv(false);
-    const file = e.dataTransfer.files[0];
-    if (
-      file &&
-      (file.type === "application/pdf" ||
-        file.type.includes("word") ||
-        file.name.endsWith(".docx"))
-    ) {
-      setCvFile(file);
-    } else {
-      alert("Please upload a PDF or Word document.");
+  const addCertification = () => {
+    const val = certInput.trim();
+    if (val && !form.certifications.includes(val)) {
+      setForm((f) => ({ ...f, certifications: [...f.certifications, val] }));
+      setCertInput("");
     }
   };
 
-  const handleOtherDocsSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setOtherDocs((prev) => {
-      const existing = prev.map((f) => f.name);
-      const newFiles = files.filter((f) => !existing.includes(f.name));
-      return [...prev, ...newFiles];
-    });
-  };
-
-  const removeOtherDoc = (name: string) => {
-    setOtherDocs((prev) => prev.filter((f) => f.name !== name));
-  };
-
-  const handleFileDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOverCover(false);
-    const file = e.dataTransfer.files[0];
-    if (
-      file &&
-      (file.type === "application/pdf" ||
-        file.type.includes("word") ||
-        file.name.endsWith(".docx"))
-    ) {
-      setCoverLetterFile(file);
-    } else {
-      alert("Please upload a PDF or Word document.");
+  const addProject = () => {
+    const val = projectInput.trim();
+    if (val && !form.projects.includes(val)) {
+      setForm((f) => ({ ...f, projects: [...f.projects, val] }));
+      setProjectInput("");
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setCoverLetterFile(file);
+  const parseCV = async (file: File) => {
+    setParsing(true);
+    setParsedSuccess(false);
+    try {
+      const formData = new FormData();
+      formData.append("cv", file);
+      const res = await axios.post("http://localhost:8080/api/cv/parse", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const data = res.data.data;
+      setForm((f) => ({
+        ...f,
+        fullName: data.fullName || f.fullName,
+        email: data.email || f.email,
+        phone: data.phone || f.phone,
+        currentTitle: data.currentTitle || f.currentTitle,
+        yearsOfExperience: data.yearsOfExperience ? String(data.yearsOfExperience) : f.yearsOfExperience,
+        educationLevel: data.educationLevel || f.educationLevel,
+        summary: data.summary || f.summary,
+        skills: data.skills?.length > 0 ? data.skills : f.skills,
+        certifications: data.certifications?.length > 0 ? data.certifications : f.certifications,
+        projects: data.projects?.length > 0 ? data.projects : f.projects,
+        githubUrl: data.githubUrl || f.githubUrl,
+        portfolioUrl: data.portfolioUrl || f.portfolioUrl,
+      }));
+      setParsedSuccess(true);
+    } catch (e) {
+      alert("Could not parse CV automatically. Please fill in your details manually.");
+    } finally {
+      setParsing(false);
+    }
   };
 
   const handleApply = async () => {
@@ -135,7 +139,7 @@ export default function ApplyPage() {
       !form.yearsOfExperience ||
       !form.educationLevel
     ) {
-      alert("Please fill all required fields!");
+      alert("Please fill all required fields: Full Name, Email, Phone, Years of Experience, Education Level and at least one Skill!");
       return;
     }
     if (!cvFile) {
@@ -152,25 +156,29 @@ export default function ApplyPage() {
         API + "/applicants",
         {
           name: form.fullName,
+          fullName: form.fullName,
           email: form.email,
           phone: form.phone,
           currentPosition: form.currentTitle,
+          jobTitle: form.currentTitle,
+          yearsOfExperience: parseInt(form.yearsOfExperience),
           experienceYears: parseInt(form.yearsOfExperience),
-          educationLevel: form.educationLevel,
+          educationLevel: form.educationLevel === "Other" ? form.customEducation : form.educationLevel,
           summary: form.summary,
           skills: form.skills,
+          githubUrl: form.githubUrl,
+          portfolioUrl: form.portfolioUrl,
+          certifications: form.certifications,
+          projects: form.projects,
           jobId: selectedJob._id,
           source: "external",
           userId: loggedUser?._id || undefined,
           cvFile: cvFile ? cvFile.name : "",
-          otherDocuments: otherDocs.map((f) => f.name),
-          coverLetter: coverLetterFile ? coverLetterFile.name : "",
           location: "Not specified",
           status: "submitted",
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-
       setSubmitted(true);
     } catch (e: any) {
       console.error("Submit error:", e.response?.data);
@@ -179,84 +187,6 @@ export default function ApplyPage() {
       setSubmitting(false);
     }
   };
-
-  // ── Upload Box helper ──────────────────────────────────────────────────────
-  const UploadBox = ({
-    label,
-    sublabel,
-    icon,
-    file,
-    dragOver,
-    onDragOver,
-    onDragLeave,
-    onDrop,
-    onClick,
-    inputRef,
-    accept,
-    onChange,
-    required,
-  }: any) => (
-    <div style={{ marginBottom: 20 }}>
-      <label
-        style={{
-          display: "block",
-          fontSize: 12,
-          fontWeight: 600,
-          color: "#374151",
-          marginBottom: 6,
-        }}
-      >
-        {label} {required && <span style={{ color: "#dc2626" }}>*</span>}
-        {sublabel && (
-          <span style={{ color: "#94a3b8", fontWeight: 400 }}> {sublabel}</span>
-        )}
-      </label>
-      <div
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        onClick={onClick}
-        style={{
-          border: `2px dashed ${dragOver ? "#1d4ed8" : file ? "#16a34a" : "#cbd5e1"}`,
-          borderRadius: 12,
-          padding: "20px",
-          textAlign: "center" as const,
-          cursor: "pointer",
-          background: dragOver ? "#eff6ff" : file ? "#f0fdf4" : "#f8faff",
-          transition: "all 0.2s",
-        }}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept={accept}
-          style={{ display: "none" }}
-          onChange={onChange}
-        />
-        {file ? (
-          <div>
-            <div style={{ fontSize: 26, marginBottom: 6 }}>{icon}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}>
-              {file.name}
-            </div>
-            <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>
-              {(file.size / 1024).toFixed(0)} KB
-            </div>
-          </div>
-        ) : (
-          <div>
-            <div style={{ fontSize: 26, marginBottom: 6 }}>{icon}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>
-              Drop file here or click to browse
-            </div>
-            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>
-              PDF or Word (.docx)
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 
   if (submitted) {
     return (
@@ -295,7 +225,7 @@ export default function ApplyPage() {
               border: "3px solid #86efac",
             }}
           >
-            <span style={{ fontSize: 32 }}>✓</span>
+            <span style={{ fontSize: 32, color: "#16a34a" }}>OK</span>
           </div>
           <h2
             style={{
@@ -330,7 +260,7 @@ export default function ApplyPage() {
                 fontSize: 13,
                 fontWeight: 800,
                 color: "#374151",
-                textTransform: "uppercase" as const,
+                textTransform: "uppercase",
                 letterSpacing: 0.8,
                 marginBottom: 18,
               }}
@@ -341,17 +271,17 @@ export default function ApplyPage() {
               {
                 step: "01",
                 title: "Application Review",
-                desc: "Our HR team will review your application within 3–5 business days.",
+                desc: "Our HR team will review your application within 3-5 business days.",
               },
               {
                 step: "02",
-                title: "Shortlisting",
-                desc: "Candidates who meet our requirements will be shortlisted.",
+                title: "AI Screening",
+                desc: "Your profile will be scored by our AI based on skills, experience and projects.",
               },
               {
                 step: "03",
                 title: "You Will Be Contacted",
-                desc: "If selected, we'll reach out via email or phone to schedule an interview.",
+                desc: "If selected, we will reach out via email or phone to schedule an interview.",
               },
             ].map((item) => (
               <div
@@ -409,7 +339,7 @@ export default function ApplyPage() {
               textDecoration: "none",
             }}
           >
-            Track My Application →
+            Track My Application
           </a>
         </div>
       </div>
@@ -443,7 +373,6 @@ export default function ApplyPage() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                border: "1px solid rgba(255,255,255,0.3)",
               }}
             >
               <span style={{ fontSize: 24, color: "white", fontWeight: 900 }}>
@@ -482,7 +411,6 @@ export default function ApplyPage() {
                 textAlign: "center",
               }}
             >
-              <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
               <h3 style={{ color: "#0f172a", margin: "0 0 8px" }}>
                 No open positions right now
               </h3>
@@ -538,7 +466,7 @@ export default function ApplyPage() {
                             marginBottom: 12,
                           }}
                         >
-                          📍 {job.location} · 🎓 {job.educationLevel} · ⏱{" "}
+                          {job.location} - {job.educationLevel} -{" "}
                           {job.experienceYears}+ years
                         </div>
                         <p
@@ -552,11 +480,7 @@ export default function ApplyPage() {
                           {job.description?.slice(0, 120)}...
                         </p>
                         <div
-                          style={{
-                            display: "flex",
-                            gap: 6,
-                            flexWrap: "wrap" as const,
-                          }}
+                          style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
                         >
                           {job.requiredSkills?.slice(0, 5).map((s: string) => (
                             <span
@@ -587,11 +511,10 @@ export default function ApplyPage() {
                           fontSize: 14,
                           fontWeight: 700,
                           cursor: "pointer",
-                          whiteSpace: "nowrap" as const,
                           flexShrink: 0,
                         }}
                       >
-                        Apply Now →
+                        Apply Now
                       </button>
                     </div>
                   </div>
@@ -634,14 +557,14 @@ export default function ApplyPage() {
             cursor: "pointer",
           }}
         >
-          ← Back
+          Back
         </button>
         <div>
           <div style={{ color: "white", fontWeight: 800, fontSize: 16 }}>
             {selectedJob.title}
           </div>
           <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>
-            📍 {selectedJob.location} · {selectedJob.experienceYears}+ years
+            {selectedJob.location} - {selectedJob.experienceYears}+ years
             experience
           </div>
         </div>
@@ -677,7 +600,7 @@ export default function ApplyPage() {
                 fontSize: 11,
                 fontWeight: 700,
                 color: "#94a3b8",
-                textTransform: "uppercase" as const,
+                textTransform: "uppercase",
                 letterSpacing: 1,
                 marginBottom: 14,
               }}
@@ -738,7 +661,7 @@ export default function ApplyPage() {
                       border: "1px solid #e2e8f0",
                       fontSize: 13,
                       outline: "none",
-                      boxSizing: "border-box" as const,
+                      boxSizing: "border-box",
                       background: "#f8faff",
                     }}
                   />
@@ -754,7 +677,7 @@ export default function ApplyPage() {
                 fontSize: 11,
                 fontWeight: 700,
                 color: "#94a3b8",
-                textTransform: "uppercase" as const,
+                textTransform: "uppercase",
                 letterSpacing: 1,
                 marginBottom: 14,
               }}
@@ -797,7 +720,7 @@ export default function ApplyPage() {
                     border: "1px solid #e2e8f0",
                     fontSize: 13,
                     outline: "none",
-                    boxSizing: "border-box" as const,
+                    boxSizing: "border-box",
                     background: "#f8faff",
                   }}
                 />
@@ -832,7 +755,7 @@ export default function ApplyPage() {
                   <option value="">Select level</option>
                   <option>High School</option>
                   <option>Diploma</option>
-                  <option>Bachelor's Degree</option>
+                  <option>Bachelor Degree</option>
                   <option>BSc Computer Science</option>
                   <option>BSc Software Engineering</option>
                   <option>BSc Information Technology</option>
@@ -845,6 +768,17 @@ export default function ApplyPage() {
               </div>
             </div>
           </div>
+            {form.educationLevel === "Other" && (
+              <div style={{ marginTop: 14 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Please specify your education *</label>
+                <input
+                  placeholder="e.g. BEng Electrical Engineering"
+                  value={form.customEducation}
+                  onChange={(e) => setForm((f) => ({ ...f, customEducation: e.target.value }))}
+                  style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, outline: "none", boxSizing: "border-box", background: "#f8faff" }}
+                />
+              </div>
+            )}
 
           {/* Professional Summary */}
           <div style={{ marginBottom: 24 }}>
@@ -860,7 +794,7 @@ export default function ApplyPage() {
               Professional Summary
             </label>
             <textarea
-              placeholder="Tell us about yourself, your experience and why you're a great fit..."
+              placeholder="Tell us about yourself, your experience and why you are a great fit..."
               value={form.summary}
               onChange={(e) =>
                 setForm((f) => ({ ...f, summary: e.target.value }))
@@ -873,232 +807,141 @@ export default function ApplyPage() {
                 border: "1px solid #e2e8f0",
                 fontSize: 13,
                 outline: "none",
-                resize: "vertical" as const,
-                boxSizing: "border-box" as const,
+                resize: "vertical",
+                boxSizing: "border-box",
                 background: "#f8faff",
               }}
             />
           </div>
 
-          {/* ── DOCUMENTS SECTION ── */}
+          {/* CV Upload */}
           <div style={{ marginBottom: 24 }}>
             <div
               style={{
                 fontSize: 11,
                 fontWeight: 700,
                 color: "#94a3b8",
-                textTransform: "uppercase" as const,
+                textTransform: "uppercase",
                 letterSpacing: 1,
-                marginBottom: 16,
+                marginBottom: 14,
               }}
             >
               Documents
             </div>
-
-            {/* CV / Resume */}
-            <UploadBox
-              label="CV / Resume"
-              sublabel="(PDF or Word)"
-              icon="📄"
-              file={cvFile}
-              dragOver={dragOverCv}
-              required={true}
-              onDragOver={(e: any) => {
-                e.preventDefault();
-                setDragOverCv(true);
-              }}
-              onDragLeave={() => setDragOverCv(false)}
-              onDrop={handleCvDrop}
-              onClick={() => cvInputRef.current?.click()}
-              inputRef={cvInputRef}
-              accept=".pdf,.doc,.docx"
-              onChange={(e: any) => {
-                const f = e.target.files?.[0];
-                if (f) setCvFile(f);
-              }}
-            />
-            {cvFile && (
-              <div
-                style={{ marginTop: -12, marginBottom: 14, textAlign: "right" }}
-              >
-                <span
-                  onClick={() => setCvFile(null)}
-                  style={{
-                    fontSize: 12,
-                    color: "#dc2626",
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                  }}
-                >
-                  Remove
-                </span>
-              </div>
-            )}
-
-            {/* Other Documents */}
-            <div style={{ marginBottom: 20 }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#374151",
-                  marginBottom: 6,
-                }}
-              >
-                Other Documents{" "}
-                <span style={{ color: "#94a3b8", fontWeight: 400 }}>
-                  (Certificates, National ID, Passport, etc.)
-                </span>
-              </label>
-              <div
-                onClick={() => otherDocsInputRef.current?.click()}
-                style={{
-                  border: "2px dashed #cbd5e1",
-                  borderRadius: 12,
-                  padding: "18px 20px",
-                  textAlign: "center" as const,
-                  cursor: "pointer",
-                  background: "#f8faff",
-                }}
-              >
-                <input
-                  ref={otherDocsInputRef}
-                  type="file"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  multiple
-                  style={{ display: "none" }}
-                  onChange={handleOtherDocsSelect}
-                />
-                <div style={{ fontSize: 24, marginBottom: 6 }}>📁</div>
-                <div
-                  style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}
-                >
-                  Click to add documents
-                </div>
-                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>
-                  PDF, Word, or Image · Multiple files allowed
-                </div>
-              </div>
-              {otherDocs.length > 0 && (
-                <div
-                  style={{
-                    marginTop: 10,
-                    display: "flex",
-                    flexDirection: "column" as const,
-                    gap: 8,
-                  }}
-                >
-                  {otherDocs.map((f) => (
-                    <div
-                      key={f.name}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        background: "#f0fdf4",
-                        border: "1px solid #bbf7d0",
-                        borderRadius: 10,
-                        padding: "10px 14px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                        }}
-                      >
-                        <span style={{ fontSize: 18 }}>📎</span>
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 700,
-                              color: "#0f172a",
-                            }}
-                          >
-                            {f.name}
-                          </div>
-                          <div style={{ fontSize: 11, color: "#64748b" }}>
-                            {(f.size / 1024).toFixed(0)} KB
-                          </div>
-                        </div>
-                      </div>
-                      <span
-                        onClick={() => removeOtherDoc(f.name)}
-                        style={{
-                          fontSize: 18,
-                          color: "#dc2626",
-                          cursor: "pointer",
-                          lineHeight: 1,
-                        }}
-                      >
-                        ×
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Cover Letter */}
-            <UploadBox
-              label="Cover Letter"
-              sublabel="(PDF or Word)"
-              icon="📝"
-              file={coverLetterFile}
-              dragOver={dragOverCover}
-              required={false}
-              onDragOver={(e: any) => {
-                e.preventDefault();
-                setDragOverCover(true);
-              }}
-              onDragLeave={() => setDragOverCover(false)}
-              onDrop={handleFileDrop}
-              onClick={() => fileInputRef.current?.click()}
-              inputRef={fileInputRef}
-              accept=".pdf,.doc,.docx"
-              onChange={handleFileSelect}
-            />
-            {coverLetterFile && (
-              <div
-                style={{ marginTop: -12, marginBottom: 14, textAlign: "right" }}
-              >
-                <span
-                  onClick={() => setCoverLetterFile(null)}
-                  style={{
-                    fontSize: 12,
-                    color: "#dc2626",
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                  }}
-                >
-                  Remove
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Skills */}
-          <div style={{ marginBottom: 28 }}>
             <label
               style={{
                 display: "block",
                 fontSize: 12,
                 fontWeight: 600,
                 color: "#374151",
-                marginBottom: 10,
+                marginBottom: 6,
               }}
             >
-              Your Skills{" "}
-              <span style={{ color: "#94a3b8", fontWeight: 400 }}>
-                ({form.skills.length} selected)
-              </span>
+              CV / Resume * <span style={{ color: "#dc2626" }}>required</span>
             </label>
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverCv(true);
+              }}
+              onDragLeave={() => setDragOverCv(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverCv(false);
+                const file = e.dataTransfer.files[0];
+                if (file) setCvFile(file);
+              }}
+              onClick={() => cvInputRef.current?.click()}
+              style={{
+                border: `2px dashed ${dragOverCv ? "#1d4ed8" : cvFile ? "#16a34a" : "#cbd5e1"}`,
+                borderRadius: 12,
+                padding: "20px",
+                textAlign: "center",
+                cursor: "pointer",
+                background: dragOverCv
+                  ? "#eff6ff"
+                  : cvFile
+                    ? "#f0fdf4"
+                    : "#f8faff",
+              }}
+            >
+              <input
+                ref={cvInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setCvFile(f);
+                }}
+              />
+              {cvFile ? (
+                <div>
+                  <div
+                    style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}
+                  >
+                    {cvFile.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>
+                    {(cvFile.size / 1024).toFixed(0)} KB
+                  </div>
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCvFile(null);
+                    }}
+                    style={{
+                      fontSize: 12,
+                      color: "#dc2626",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Remove
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <div
+                    style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}
+                  >
+                    Drop file here or click to browse
+                  </div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>
+                    PDF or Word (.docx)
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {parsedSuccess && (
+              <div style={{ background: "#dcfce7", border: "1px solid #86efac", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 18 }}>OK</span>
+                <div>
+                  <div style={{ fontWeight: 700, color: "#15803d", fontSize: 13 }}>CV parsed successfully!</div>
+                  <div style={{ fontSize: 12, color: "#16a34a" }}>Your details have been auto-filled. Please review and correct anything that looks wrong.</div>
+                </div>
+              </div>
+            )}
+
+            {/* Skills */}
+          <div style={{ marginBottom: 24 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#94a3b8",
+                textTransform: "uppercase",
+                letterSpacing: 1,
+                marginBottom: 14,
+              }}
+            >
+              Skills
+            </div>
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               <input
-                placeholder="Add a skill not listed below..."
+                placeholder="Add a custom skill..."
                 value={customSkill}
                 onChange={(e) => setCustomSkill(e.target.value)}
                 onKeyDown={(e) => {
@@ -1133,52 +976,7 @@ export default function ApplyPage() {
                 + Add
               </button>
             </div>
-            {form.skills.filter((s) => !SKILLS_OPTIONS.includes(s)).length >
-              0 && (
-              <div style={{ marginBottom: 10 }}>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "#94a3b8",
-                    fontWeight: 600,
-                    marginBottom: 6,
-                  }}
-                >
-                  CUSTOM SKILLS
-                </div>
-                <div
-                  style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}
-                >
-                  {form.skills
-                    .filter((s) => !SKILLS_OPTIONS.includes(s))
-                    .map((skill) => (
-                      <span
-                        key={skill}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          padding: "7px 12px",
-                          borderRadius: 20,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          background: "#1d4ed8",
-                          color: "white",
-                        }}
-                      >
-                        {skill}
-                        <span
-                          onClick={() => removeSkill(skill)}
-                          style={{ cursor: "pointer", fontSize: 14 }}
-                        >
-                          ×
-                        </span>
-                      </span>
-                    ))}
-                </div>
-              </div>
-            )}
-            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {SKILLS_OPTIONS.map((skill) => (
                 <button
                   key={skill}
@@ -1202,7 +1000,335 @@ export default function ApplyPage() {
                   {skill}
                 </button>
               ))}
+              {form.skills
+                .filter((s) => !SKILLS_OPTIONS.includes(s))
+                .map((skill) => (
+                  <span
+                    key={skill}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "7px 12px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: "#1d4ed8",
+                      color: "white",
+                    }}
+                  >
+                    {skill}
+                    <span
+                      onClick={() => removeSkill(skill)}
+                      style={{ cursor: "pointer", fontSize: 14 }}
+                    >
+                      x
+                    </span>
+                  </span>
+                ))}
             </div>
+          </div>
+
+          {/* Online Presence */}
+          <div style={{ marginBottom: 24 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#94a3b8",
+                textTransform: "uppercase",
+                letterSpacing: 1,
+                marginBottom: 14,
+              }}
+            >
+              Online Presence
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 14,
+              }}
+            >
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "#374151",
+                    marginBottom: 6,
+                  }}
+                >
+                  GitHub Profile URL
+                </label>
+                <input
+                  placeholder="https://github.com/username"
+                  value={form.githubUrl}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, githubUrl: e.target.value }))
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "11px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #e2e8f0",
+                    fontSize: 13,
+                    outline: "none",
+                    boxSizing: "border-box",
+                    background: "#f8faff",
+                  }}
+                />
+              </div>
+              <div>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "#374151",
+                    marginBottom: 6,
+                  }}
+                >
+                  Portfolio / Website URL
+                </label>
+                <input
+                  placeholder="https://yourportfolio.com"
+                  value={form.portfolioUrl}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, portfolioUrl: e.target.value }))
+                  }
+                  style={{
+                    width: "100%",
+                    padding: "11px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #e2e8f0",
+                    fontSize: 13,
+                    outline: "none",
+                    boxSizing: "border-box",
+                    background: "#f8faff",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Projects */}
+          <div style={{ marginBottom: 24 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#94a3b8",
+                textTransform: "uppercase",
+                letterSpacing: 1,
+                marginBottom: 14,
+              }}
+            >
+              Projects{" "}
+              <span style={{ color: "#16a34a", fontSize: 10 }}>
+                (OPTIONAL)
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <input
+                placeholder="e.g. E-commerce platform built with React and Node.js"
+                value={projectInput}
+                onChange={(e) => setProjectInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addProject();
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1px solid #e2e8f0",
+                  fontSize: 13,
+                  outline: "none",
+                  background: "#f8faff",
+                }}
+              />
+              <button
+                onClick={addProject}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "#1d4ed8",
+                  color: "white",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                + Add
+              </button>
+            </div>
+            {form.projects.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {form.projects.map((p, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      background: "#eff6ff",
+                      border: "1px solid #bfdbfe",
+                      borderRadius: 10,
+                      padding: "10px 14px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 13,
+                        color: "#1e3a8a",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {p}
+                    </span>
+                    <span
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          projects: f.projects.filter((_, j) => j !== i),
+                        }))
+                      }
+                      style={{
+                        fontSize: 18,
+                        color: "#dc2626",
+                        cursor: "pointer",
+                      }}
+                    >
+                      x
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#94a3b8",
+                  textAlign: "center",
+                  padding: "12px",
+                  background: "#f8faff",
+                  borderRadius: 10,
+                  border: "1px dashed #e2e8f0",
+                }}
+              >
+                Add any projects you have worked on
+              </div>
+            )}
+          </div>
+
+          {/* Certifications */}
+          <div style={{ marginBottom: 28 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#94a3b8",
+                textTransform: "uppercase",
+                letterSpacing: 1,
+                marginBottom: 14,
+              }}
+            >
+              Certifications{" "}
+              <span style={{ color: "#16a34a", fontSize: 10 }}>
+                (OPTIONAL)
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <input
+                placeholder="e.g. AWS Certified Developer, Google Cloud, PMP"
+                value={certInput}
+                onChange={(e) => setCertInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCertification();
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1px solid #e2e8f0",
+                  fontSize: 13,
+                  outline: "none",
+                  background: "#f8faff",
+                }}
+              />
+              <button
+                onClick={addCertification}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "#7c3aed",
+                  color: "white",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                + Add
+              </button>
+            </div>
+            {form.certifications.length > 0 ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {form.certifications.map((c, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "7px 12px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: "#7c3aed",
+                      color: "white",
+                    }}
+                  >
+                    {c}
+                    <span
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          certifications: f.certifications.filter(
+                            (_, j) => j !== i,
+                          ),
+                        }))
+                      }
+                      style={{ cursor: "pointer", fontSize: 14 }}
+                    >
+                      x
+                    </span>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#94a3b8",
+                  textAlign: "center",
+                  padding: "12px",
+                  background: "#f8faff",
+                  borderRadius: 10,
+                  border: "1px dashed #e2e8f0",
+                }}
+              >
+                Add any certifications you have earned
+              </div>
+            )}
           </div>
 
           <button
@@ -1220,10 +1346,9 @@ export default function ApplyPage() {
               fontSize: 16,
               fontWeight: 700,
               cursor: submitting ? "not-allowed" : "pointer",
-              boxShadow: "0 4px 16px rgba(29,78,216,0.35)",
             }}
           >
-            {submitting ? "Submitting..." : "🚀 Submit Application"}
+            {submitting ? "Submitting..." : "Submit Application"}
           </button>
           <p
             style={{
@@ -1233,13 +1358,21 @@ export default function ApplyPage() {
               marginTop: 16,
             }}
           >
-            By submitting, you agree to our screening process powered by AI
+            By submitting, you agree that your information will be reviewed by our HR team
           </p>
         </div>
       </div>
     </div>
   );
 }
+
+
+
+
+
+
+
+
 
 
 

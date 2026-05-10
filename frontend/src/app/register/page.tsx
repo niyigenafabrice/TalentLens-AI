@@ -2,7 +2,7 @@
 import { useState } from "react";
 import axios from "axios";
 
-const API = "https://talentlens-ai-production.up.railway.app/api";
+const API = "http://localhost:8080/api";
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
@@ -333,6 +333,7 @@ export default function RegisterPage() {
     </div>
   );
 }
+
 
 
 

@@ -2,12 +2,12 @@ import { Request, Response } from "express";
 import * as XLSX from "xlsx";
 const pdf = require("pdf-parse");
 import Applicant from "../models/applicant.model";
-import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const parseResumeWithAI = async (resumeText: string) => {
   try {
@@ -29,11 +29,12 @@ Return ONLY a JSON object like this:
 Resume text:
 ${resumeText}
 `;
-    const result = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: prompt,
+    const result = await groq.chat.completions.create({
+      model: "llama3-8b-8192",
+      messages: [{ role: "user", content: prompt }],
     });
-    const text = result.text;
+
+    const text = result.choices[0]?.message?.content || "";
     const cleanText = text
       .replace(/```json/g, "")
       .replace(/```/g, "")
@@ -48,19 +49,13 @@ ${resumeText}
 export const uploadCSV = async (req: Request, res: Response) => {
   try {
     if (!req.file) {
-      res.status(400).json({
-        success: false,
-        message: "No file uploaded",
-      });
+      res.status(400).json({ success: false, message: "No file uploaded" });
       return;
     }
 
     const { jobId } = req.body;
     if (!jobId) {
-      res.status(400).json({
-        success: false,
-        message: "Job ID is required",
-      });
+      res.status(400).json({ success: false, message: "Job ID is required" });
       return;
     }
 
@@ -70,10 +65,7 @@ export const uploadCSV = async (req: Request, res: Response) => {
     const rows = XLSX.utils.sheet_to_json(sheet) as any[];
 
     if (rows.length === 0) {
-      res.status(400).json({
-        success: false,
-        message: "File is empty",
-      });
+      res.status(400).json({ success: false, message: "File is empty" });
       return;
     }
 
@@ -112,19 +104,13 @@ export const uploadCSV = async (req: Request, res: Response) => {
 export const uploadPDF = async (req: Request, res: Response) => {
   try {
     if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
-      res.status(400).json({
-        success: false,
-        message: "No files uploaded",
-      });
+      res.status(400).json({ success: false, message: "No files uploaded" });
       return;
     }
 
     const { jobId } = req.body;
     if (!jobId) {
-      res.status(400).json({
-        success: false,
-        message: "Job ID is required",
-      });
+      res.status(400).json({ success: false, message: "Job ID is required" });
       return;
     }
 

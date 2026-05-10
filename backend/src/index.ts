@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDatabase from "./config/database";
@@ -15,6 +15,7 @@ import userRoutes from "./routes/user.routes";
 import noteRoutes from "./routes/note.routes";
 import activityRoutes from "./routes/activity.routes";
 import jobStatsRoutes from "./routes/jobStats.routes";
+import cvRoutes from "./routes/cv.routes";
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/activities", activityRoutes);
 app.use("/api/job-stats", jobStatsRoutes);
+app.use("/api/cv", cvRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "TalentLens AI Backend is Running!" });
@@ -54,4 +56,5 @@ const startServer = async () => {
 };
 
 startServer();
+
 
