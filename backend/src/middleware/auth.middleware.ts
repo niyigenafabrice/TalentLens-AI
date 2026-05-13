@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+﻿import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "hrcompetition_secret_key";
@@ -22,6 +22,7 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
 
     // Add user to request
     (req as any).userId = decoded.id;
+    if (decoded.role === "applicant") (req as any).applicantId = decoded.id;
     (req as any).userRole = decoded.role;
 
     next();
@@ -32,3 +33,4 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
     });
   }
 };
+

@@ -1,5 +1,6 @@
-import express from "express";
+﻿import express from "express";
 import {
+  applicantLogin,
   createApplicant,
   getApplicantsByJob,
   getApplicantById,
@@ -13,9 +14,10 @@ import { protect } from "../middleware/auth.middleware";
 
 const router = express.Router();
 
+router.post("/login", applicantLogin);
 router.get("/search", searchApplicants);
-router.get("/my-application", protect, getMyApplication); // applicant sees their own
-router.patch("/my-draft", protect, updateDraft); // applicant updates draft
+router.get("/my-application", protect, getMyApplication);
+router.patch("/my-draft", protect, updateDraft);
 router.get("/", getApplicantsByJob);
 router.post("/", protect, createApplicant);
 router.get("/job/:jobId", getApplicantsByJob);
@@ -25,4 +27,3 @@ router.put("/:id", updateApplicantStatus);
 router.delete("/:id", deleteApplicant);
 
 export default router;
-

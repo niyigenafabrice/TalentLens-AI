@@ -1,4 +1,8 @@
 ﻿"use client";
+// @ts-ignore
+import jsPDF from "jspdf";
+// @ts-ignore
+import autoTable from "jspdf-autotable";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -40,6 +44,11 @@ export default function ScreeningPage() {
   const [interviewTimes, setInterviewTimes] = useState<{ [key: string]: string }>({});
   const [scheduledIds, setScheduledIds] = useState<string[]>([]);
   const [schedulingId, setSchedulingId] = useState<string | null>(null);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [showCompare, setShowCompare] = useState(false);
+  const [interviewTypes, setInterviewTypes] = useState<{ [key: string]: string }>({});
+  const [meetingLinks, setMeetingLinks] = useState<{ [key: string]: string }>({});
+  const [interviewerNames, setInterviewerNames] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -152,6 +161,50 @@ export default function ScreeningPage() {
   const midScorers = results.filter((r) => r.aiScore >= 50 && r.aiScore < 85).length;
   const lowScorers = results.filter((r) => r.aiScore < 50).length;
   const avgScore = results.length > 0 ? Math.round(results.reduce((s, r) => s + r.aiScore, 0) / results.length) : 0;
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const jobTitle = job?.title || "All Positions";
+
+    // Header
+    doc.setFillColor(29, 78, 216);
+    doc.rect(0, 0, 210, 28, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("TalentLens AI - Top Candidates Report", 14, 12);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text("Position: " + jobTitle + "   |   Generated: " + new Date().toLocaleDateString(), 14, 22);
+
+    // Summary stats
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Summary", 14, 38);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Total Ranked: " + results.length + "   |   Excellent (85+): " + highScorers + "   |   Average Score: " + avgScore + "%", 14, 46);
+
+    // Table
+    autoTable(doc, {
+      startY: 54,
+      head: [["#", "Name", "Email", "Score", "Rating", "Status"]],
+      body: results.map((r, i) => [
+        i + 1,
+        r.fullName || r.name || "-",
+        r.email || "-",
+        (r.aiScore || 0) + "%",
+        r.aiScore >= 85 ? "Excellent" : r.aiScore >= 70 ? "Good" : r.aiScore >= 50 ? "Average" : "Poor",
+        scheduledIds.includes(r._id) ? "Interview Scheduled" : r.aiScore >= 85 ? "Auto Shortlisted" : r.status === "rejected" ? "Rejected" : "Pending"
+      ]),
+      headStyles: { fillColor: [29, 78, 216], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [240, 247, 255] },
+      styles: { fontSize: 10, cellPadding: 5 },
+    });
+
+    doc.save("TalentLens-Top10-" + jobTitle.replace(/\s+/g, "-") + ".pdf");
+  };
 
   const logout = () => { localStorage.removeItem("token"); localStorage.removeItem("user"); window.location.href = "/"; };
 
@@ -333,9 +386,19 @@ export default function ScreeningPage() {
               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>
                 Top {results.length} Ranked Candidates
               </h2>
-              {avgScore > 0 && <div style={{ background: "#eff6ff", color: "#1d4ed8", fontWeight: 700, fontSize: 14, padding: "8px 16px", borderRadius: 10 }}>Avg Score: {avgScore}%</div>}
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {avgScore > 0 && <div style={{ background: "#eff6ff", color: "#1d4ed8", fontWeight: 700, fontSize: 14, padding: "8px 16px", borderRadius: 10 }}>Avg Score: {avgScore}%</div>}
+                <button onClick={exportPDF} style={{ background: "linear-gradient(135deg, #1d4ed8, #7c3aed)", color: "white", border: "none", borderRadius: 10, padding: "10px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  Export Top 10 PDF
+                </button>
+                {compareIds.length === 2 && (
+                  <button onClick={() => setShowCompare(true)} style={{ background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white", border: "none", borderRadius: 10, padding: "10px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                    Compare Selected (2)
+                  </button>
+                )}
+              </div>
             </div>
-            <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 20px" }}>Pick an interview date and time for each candidate then click Schedule Interview</p>
+            <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 20px" }}>Pick an interview date and time for each candidate then click Schedule Interview. <strong>Tip:</strong> Select 2 candidates to compare them side by side.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {results.map((r, i) => {
                 const sc = SCORE_COLOR(r.aiScore || 0);
@@ -345,7 +408,8 @@ export default function ScreeningPage() {
                 return (
                   <div key={r._id} style={{ border: "2px solid " + (isScheduled ? "#86efac" : i === 0 ? "#fbbf24" : "#f1f5f9"), borderRadius: 14, overflow: "hidden", background: isScheduled ? "#f0fdf4" : i === 0 ? "#fffbeb" : "white" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "18px 22px", cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : r._id)}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: i === 0 ? "#fbbf24" : i === 1 ? "#94a3b8" : i === 2 ? "#cd7c3a" : "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: i < 3 ? "white" : "#64748b", fontSize: 15, flexShrink: 0 }}>
+                      <input type="checkbox" checked={compareIds.includes(r._id)} onChange={(e) => { if (e.target.checked) { if (compareIds.length < 2) setCompareIds(prev => [...prev, r._id]); } else { setCompareIds(prev => prev.filter(x => x !== r._id)); } }} onClick={ev => ev.stopPropagation()} style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#1d4ed8" }} />
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: i === 0 ? "#fbbf24" : i === 1 ? "#94a3b8" : i === 2 ? "#cd7c3a" : "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: i < 3 ? "white" : "#64748b", fontSize: 15, flexShrink: 0 }}>
                         {i + 1}
                       </div>
                       <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#dbeafe", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#1d4ed8", fontSize: 16, flexShrink: 0 }}>
@@ -417,6 +481,40 @@ export default function ScreeningPage() {
                                 />
                               </div>
                             </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
+                              <div>
+                                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Interview Type</label>
+                                <select
+                                  value={interviewTypes[r._id] || "online"}
+                                  onChange={(e) => setInterviewTypes((prev) => ({ ...prev, [r._id]: e.target.value }))}
+                                  style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, outline: "none", background: "#f8faff" }}
+                                >
+                                  <option value="online">Video Call (Online)</option>
+                                  <option value="onsite">On-site</option>
+                                  <option value="phone">Phone Call</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Interviewers</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. John Smith, Alice Manager"
+                                  value={interviewerNames[r._id] || ""}
+                                  onChange={(e) => setInterviewerNames((prev) => ({ ...prev, [r._id]: e.target.value }))}
+                                  style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, outline: "none", boxSizing: "border-box", background: "#f8faff" }}
+                                />
+                              </div>
+                            </div>
+                            <div style={{ marginBottom: 16 }}>
+                              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Meeting Link / Location</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. https://meet.google.com/xxx or Office Room 3"
+                                value={meetingLinks[r._id] || ""}
+                                onChange={(e) => setMeetingLinks((prev) => ({ ...prev, [r._id]: e.target.value }))}
+                                style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, outline: "none", boxSizing: "border-box", background: "#f8faff" }}
+                              />
+                            </div>
                             <div style={{ display: "flex", gap: 10 }}>
                               <button
                                 onClick={() => scheduleInterview(r)}
@@ -447,8 +545,78 @@ export default function ScreeningPage() {
             </div>
           </div>
         )}
+      {showCompare && compareIds.length === 2 && (() => {
+        const c1 = results.find(r => r._id === compareIds[0]);
+        const c2 = results.find(r => r._id === compareIds[1]);
+        if (!c1 || !c2) return null;
+        const sc1 = SCORE_COLOR(c1.aiScore || 0);
+        const sc2 = SCORE_COLOR(c2.aiScore || 0);
+        return (
+          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <div style={{ background: "white", borderRadius: 20, padding: 32, width: "100%", maxWidth: 860, maxHeight: "90vh", overflowY: "auto" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Candidate Comparison</h2>
+                <button onClick={() => setShowCompare(false)} style={{ background: "#f1f5f9", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontSize: 14 }}>Close</button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                {[{ c: c1, sc: sc1 }, { c: c2, sc: sc2 }].map(({ c, sc }) => (
+                  <div key={c._id} style={{ border: "2px solid " + sc.color, borderRadius: 16, overflow: "hidden" }}>
+                    <div style={{ background: sc.color, padding: "16px 20px", textAlign: "center" }}>
+                      <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, color: "white", fontSize: 20, margin: "0 auto 8px" }}>{(c.fullName || c.name)?.charAt(0)}</div>
+                      <div style={{ color: "white", fontWeight: 800, fontSize: 16 }}>{c.fullName || c.name}</div>
+                      <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 12 }}>{c.email}</div>
+                      <div style={{ color: "white", fontSize: 32, fontWeight: 900, marginTop: 8 }}>{c.aiScore}%</div>
+                      <div style={{ background: "rgba(255,255,255,0.2)", color: "white", fontSize: 12, fontWeight: 700, padding: "3px 12px", borderRadius: 12, display: "inline-block" }}>{sc.label}</div>
+                    </div>
+                    <div style={{ padding: 20 }}>
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontWeight: 700, fontSize: 12, color: "#64748b", marginBottom: 6, textTransform: "uppercase" }}>Experience</div>
+                        <div style={{ fontSize: 14, color: "#0f172a", fontWeight: 600 }}>{c.yearsOfExperience || 0} years</div>
+                      </div>
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontWeight: 700, fontSize: 12, color: "#64748b", marginBottom: 6, textTransform: "uppercase" }}>Skills</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {(c.skills || []).map((s: string) => (
+                            <span key={s} style={{ background: "#eff6ff", color: "#1d4ed8", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 10 }}>{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                      {c.aiFeedback?.strengths?.length > 0 && (
+                        <div style={{ marginBottom: 14 }}>
+                          <div style={{ fontWeight: 700, fontSize: 12, color: "#16a34a", marginBottom: 6, textTransform: "uppercase" }}>Strengths</div>
+                          {c.aiFeedback.strengths.map((s: string, i: number) => (
+                            <div key={i} style={{ fontSize: 13, color: "#166534", marginBottom: 3 }}>✓ {s}</div>
+                          ))}
+                        </div>
+                      )}
+                      {c.aiFeedback?.weaknesses?.length > 0 && (
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 12, color: "#dc2626", marginBottom: 6, textTransform: "uppercase" }}>Weaknesses</div>
+                          {c.aiFeedback.weaknesses.map((s: string, i: number) => (
+                            <div key={i} style={{ fontSize: 13, color: "#991b1b", marginBottom: 3 }}>✗ {s}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       </div>
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
 

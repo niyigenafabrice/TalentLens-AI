@@ -19,7 +19,9 @@ const ROLES = ["admin", "hr_manager", "viewer"];
 const ROLE_COLORS: any = {
   admin:      { bg: "#fee2e2", color: "#dc2626" },
   hr_manager: { bg: "#dbeafe", color: "#1d4ed8" },
+  hr_manager2: { bg: "#dbeafe", color: "#1d4ed8" },
   viewer:     { bg: "#f1f5f9", color: "#64748b" },
+  applicant:  { bg: "#f5f3ff", color: "#7c3aed" },
 };
 const ROLE_PERMISSIONS: any = {
   admin:      ["View all", "Create jobs", "Edit jobs", "Delete jobs", "Screen candidates", "Shortlist", "Reject", "Manage users"],
@@ -32,11 +34,16 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
   const [activityUser, setActivityUser] = useState<any>(null);
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "hr_manager" });
   const [saving, setSaving] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ name: "", email: "", role: "hr_manager" });
+  const [inviting, setInviting] = useState(false);
+  const [inviteSent, setInviteSent] = useState(false);
+  
   const [activities, setActivities] = useState<any[]>([]);
+  const [roleFilter, setRoleFilter] = useState("hr");
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -49,7 +56,6 @@ export default function UsersPage() {
       const res = await axios.get(API + "/users");
       setUsers(res.data.data || []);
     } catch (e) {
-      // fallback: show current user only
       const stored = localStorage.getItem("user");
       if (stored) setUsers([JSON.parse(stored)]);
     } finally {
@@ -105,15 +111,36 @@ export default function UsersPage() {
 
   const isAdmin = currentUser?.role === "admin";
 
+  const sendInvite = async () => {
+    if (!inviteForm.name || !inviteForm.email) { alert("Please fill in name and email"); return; }
+    setInviting(true);
+    try {
+      await axios.post(API + "/invite", inviteForm);
+      setInviteSent(true);
+      setTimeout(() => { setShowInviteModal(false); setInviteSent(false); setInviteForm({ name: "", email: "", role: "hr_manager" }); }, 2000);
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Failed to send invite");
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "Never";
     return new Date(dateStr).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
+  // Filter only HR team (non-applicants)
+  const hrUsers = users.filter((u) => u.role !== "applicant");
+  const displayUsers = hrUsers;
+
+  const adminCount = hrUsers.filter((u) => u.role === "admin").length;
+  const hrCount = hrUsers.filter((u) => u.role === "hr_manager").length;
+  const viewerCount = hrUsers.filter((u) => u.role === "viewer").length;
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f8faff", fontFamily: "'Segoe UI', sans-serif" }}>
-      {/* Sidebar */}
-      <div style={{ width: 260, minHeight: "100vh", background: "linear-gradient(180deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%)", position: "fixed", left: 0, top: 0, display: "flex", flexDirection: "column", zIndex: 100, boxShadow: "4px 0 24px rgba(29,78,216,0.15)" }}>
+      <div style={{ width: 260, minHeight: "100vh", background: "linear-gradient(180deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%)", position: "fixed", left: 0, top: 0, display: "flex", flexDirection: "column", zIndex: 100 }}>
         <div style={{ padding: "32px 24px 24px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -145,64 +172,71 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Main */}
       <div style={{ marginLeft: 260, flex: 1, padding: 32 }}>
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", margin: 0 }}>Users</h1>
             <p style={{ color: "#64748b", margin: "6px 0 0", fontSize: 14 }}>Manage HR team members, roles and permissions</p>
           </div>
           {isAdmin && (
-            <button onClick={() => setShowAddModal(true)} style={{ background: "#1d4ed8", color: "white", border: "none", borderRadius: 10, padding: "11px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-              + Add User
-            </button>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowInviteModal(true)} style={{ background: "#7c3aed", color: "white", border: "none", borderRadius: 10, padding: "11px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                Invite by Email
+              </button>
+              <button onClick={() => setShowAddModal(true)} style={{ background: "#1d4ed8", color: "white", border: "none", borderRadius: 10, padding: "11px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                + Add HR User
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Role Permission Summary */}
+        {/* Role Summary Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 28 }}>
-          {ROLES.map((role) => {
-            const rc = ROLE_COLORS[role];
-            const count = users.filter((u) => u.role === role).length;
-            return (
-              <div key={role} style={{ background: "white", borderRadius: 14, padding: "20px 24px", border: "1px solid #f1f5f9", boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <span style={{ background: rc.bg, color: rc.color, fontWeight: 700, fontSize: 12, padding: "4px 12px", borderRadius: 20, textTransform: "capitalize" }}>
-                    {role.replace("_", " ")}
-                  </span>
-                  <span style={{ fontWeight: 800, fontSize: 20, color: rc.color }}>{count}</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {ROLE_PERMISSIONS[role].map((p: string) => (
-                    <div key={p} style={{ fontSize: 11, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ color: "#16a34a", fontWeight: 700 }}>?</span> {p}
-                    </div>
-                  ))}
-                </div>
+          {[
+            { role: "Admin", count: adminCount, color: "#dc2626", bg: "#fee2e2", permissions: ROLE_PERMISSIONS.admin },
+            { role: "HR Manager", count: hrCount, color: "#1d4ed8", bg: "#dbeafe", permissions: ROLE_PERMISSIONS.hr_manager },
+            { role: "Viewer", count: viewerCount, color: "#64748b", bg: "#f1f5f9", permissions: ROLE_PERMISSIONS.viewer },
+          ].map((r) => (
+            <div key={r.role} style={{ background: "white", borderRadius: 14, padding: "20px 24px", border: "1px solid #f1f5f9", boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <span style={{ background: r.bg, color: r.color, fontWeight: 700, fontSize: 12, padding: "4px 12px", borderRadius: 20 }}>{r.role}</span>
+                <span style={{ fontWeight: 900, fontSize: 22, color: r.color }}>{r.count}</span>
               </div>
-            );
-          })}
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {r.permissions.map((p: string) => (
+                  <div key={p} style={{ fontSize: 11, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ color: "#16a34a", fontWeight: 900, fontSize: 13 }}>+</span> {p}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
+
+
 
         {/* Users Table */}
         {loading ? (
           <div style={{ textAlign: "center", padding: 80, color: "#94a3b8" }}>Loading users...</div>
+        ) : displayUsers.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 60, background: "white", borderRadius: 16, border: "1px solid #f1f5f9" }}>
+            <div style={{ fontSize: 13, color: "#94a3b8" }}>No users found</div>
+          </div>
         ) : (
           <div style={{ background: "white", borderRadius: 16, border: "1px solid #f1f5f9", overflow: "hidden", boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f8faff", borderBottom: "1px solid #f1f5f9" }}>
-                  {["User", "Role", "Last Login", "Permissions", "Activity", isAdmin ? "Actions" : ""].map((h) => h && (
+                  {["User", "Role", "Last Login", "Permissions", "Activity", isAdmin ? "Actions" : ""].filter(Boolean).map((h) => (
                     <th key={h} style={{ padding: "14px 20px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {users.map((u, i) => {
+                {displayUsers.map((u, i) => {
                   const rc = ROLE_COLORS[u.role] || ROLE_COLORS.viewer;
                   return (
-                    <tr key={u._id || i} style={{ borderBottom: i < users.length - 1 ? "1px solid #f8faff" : "none" }}
+                    <tr key={u._id || i} style={{ borderBottom: i < displayUsers.length - 1 ? "1px solid #f8faff" : "none" }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = "#f8faff")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "white")}>
                       <td style={{ padding: "16px 20px" }}>
@@ -222,7 +256,7 @@ export default function UsersPage() {
                         </div>
                       </td>
                       <td style={{ padding: "16px 20px" }}>
-                        {isAdmin && u._id !== currentUser?._id ? (
+                        {isAdmin && u._id !== currentUser?._id && u.role !== "applicant" ? (
                           <select value={u.role} onChange={(e) => updateRole(u._id, e.target.value)}
                             style={{ background: rc.bg, color: rc.color, border: "none", borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", outline: "none" }}>
                             {ROLES.map((r) => <option key={r} value={r}>{r.replace("_", " ")}</option>)}
@@ -235,11 +269,6 @@ export default function UsersPage() {
                       </td>
                       <td style={{ padding: "16px 20px" }}>
                         <div style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{formatDate(u.lastLogin)}</div>
-                        {u.lastLogin && (
-                          <div style={{ fontSize: 11, color: "#94a3b8" }}>
-                            {Math.round((Date.now() - new Date(u.lastLogin).getTime()) / (1000 * 60 * 60))} hours ago
-                          </div>
-                        )}
                       </td>
                       <td style={{ padding: "16px 20px" }}>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxWidth: 200 }}>
@@ -280,7 +309,7 @@ export default function UsersPage() {
       {showAddModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: "white", borderRadius: 20, padding: 36, width: 440, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-            <h2 style={{ margin: "0 0 24px", fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Add New User</h2>
+            <h2 style={{ margin: "0 0 24px", fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Add New HR User</h2>
             {[
               { label: "Full Name", key: "name", type: "text", placeholder: "e.g. Jane Smith" },
               { label: "Email", key: "email", type: "email", placeholder: "e.g. jane@company.com" },
@@ -302,7 +331,7 @@ export default function UsersPage() {
               <div style={{ marginTop: 8, background: "#f8faff", borderRadius: 8, padding: "10px 12px" }}>
                 <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 4 }}>Permissions for this role:</div>
                 {ROLE_PERMISSIONS[newUser.role].map((p: string) => (
-                  <div key={p} style={{ fontSize: 11, color: "#374151" }}>? {p}</div>
+                  <div key={p} style={{ fontSize: 11, color: "#374151", marginBottom: 2 }}>+ {p}</div>
                 ))}
               </div>
             </div>
@@ -316,17 +345,63 @@ export default function UsersPage() {
         </div>
       )}
 
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "white", borderRadius: 20, padding: 36, width: 440, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+            <h2 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Invite Team Member</h2>
+            <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 24px" }}>Send an email invitation to join TalentLens</p>
+            {inviteSent ? (
+              <div style={{ textAlign: "center", padding: 32 }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>OK</div>
+                <div style={{ fontWeight: 700, color: "#15803d", fontSize: 16 }}>Invitation sent!</div>
+                <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>Check {inviteForm.email} for the invite link</div>
+              </div>
+            ) : (
+              <>
+                {[
+                  { label: "Full Name", key: "name", type: "text", placeholder: "e.g. Jane Smith" },
+                  { label: "Email Address", key: "email", type: "email", placeholder: "e.g. jane@company.com" },
+                ].map((f) => (
+                  <div key={f.key} style={{ marginBottom: 16 }}>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>{f.label}</label>
+                    <input type={f.type} placeholder={f.placeholder} value={(inviteForm as any)[f.key]}
+                      onChange={(e) => setInviteForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                      style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+                  </div>
+                ))}
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Role</label>
+                  <select value={inviteForm.role} onChange={(e) => setInviteForm((prev) => ({ ...prev, role: e.target.value }))}
+                    style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 14, outline: "none" }}>
+                    <option value="hr_manager">HR Manager</option>
+                    <option value="admin">Admin</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                </div>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button onClick={() => setShowInviteModal(false)} style={{ flex: 1, padding: "12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "white", color: "#64748b", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+                  <button onClick={sendInvite} disabled={inviting} style={{ flex: 1, padding: "12px", borderRadius: 10, border: "none", background: "#7c3aed", color: "white", fontSize: 14, fontWeight: 700, cursor: inviting ? "not-allowed" : "pointer" }}>
+                    {inviting ? "Sending..." : "Send Invitation"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Activity Log Modal */}
       {activityUser && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: "white", borderRadius: 20, padding: 36, width: 500, maxHeight: "80vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Activity Log � {activityUser.name}</h2>
-              <button onClick={() => setActivityUser(null)} style={{ background: "#f1f5f9", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#64748b", fontWeight: 700 }}>?</button>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#0f172a" }}>Activity Log - {activityUser.name}</h2>
+              <button onClick={() => setActivityUser(null)} style={{ background: "#f1f5f9", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", color: "#64748b", fontWeight: 700, fontSize: 16 }}>X</button>
             </div>
             {activities.length === 0 ? (
               <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>??</div>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>📋</div>
                 <div style={{ fontWeight: 600 }}>No activity recorded yet</div>
                 <div style={{ fontSize: 13, marginTop: 4 }}>Actions will appear here once the user starts working</div>
               </div>
@@ -345,4 +420,9 @@ export default function UsersPage() {
     </div>
   );
 }
+
+
+
+
+
 

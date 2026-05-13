@@ -1,4 +1,5 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
+import { logActivity } from "../utils/logActivity";
 import Job from "../models/job.model";
 import Applicant from "../models/applicant.model";
 import Screening from "../models/screening.model";
@@ -187,3 +188,4 @@ export const getInvitationEmail = async (req: Request, res: Response) => {
       .json({ success: false, message: "Failed to generate email", error });
   }
 };
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -70,10 +70,20 @@ export default function InterviewsPage() {
     fetchAll();
   }, []);
 
-  const getApplicant = (id: string) => applicants.find((a) => a._id === id);
-  const getJob = (id: string) => jobs.find((j) => j._id === id);
+  const getApplicant = (iv: any) => {
+    // Handle both populated object and string ID
+    if (iv?.applicantId?._id) return iv.applicantId;
+    return applicants.find((a) => a._id === iv?.applicantId);
+  };
+  const getJob = (iv: any) => {
+    if (iv?.jobId?._id) return iv.jobId;
+    return jobs.find((j) => j._id === iv?.jobId);
+  };
 
-  const shortlisted = applicants.filter((a) => a.status === "shortlisted" || a.status === "interviewed");
+  const shortlisted = applicants
+    .filter((a) => a.aiScore && a.status !== "rejected" && (form.jobId ? a.jobId === form.jobId : true))
+    .sort((a, b) => (b.aiScore || 0) - (a.aiScore || 0))
+    .slice(0, 10);
 
   const openSchedule = (iv?: any) => {
     if (iv) {
@@ -282,8 +292,8 @@ export default function InterviewsPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((iv) => {
                   const sc = STATUS_COLORS[iv.status] || STATUS_COLORS.scheduled;
-                  const app = getApplicant(iv.applicantId);
-                  const job = getJob(iv.jobId);
+                  const app = getApplicant(iv);
+                  const job = getJob(iv);
                   const isPast = new Date(iv.date) < new Date() && iv.status === "scheduled";
                   return (
                     <div key={iv._id} style={{ background: "white", borderRadius: 14, padding: "20px 24px", border: "1px solid " + (isPast ? "#fca5a5" : "#f1f5f9"), boxShadow: "0 1px 8px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: 20 }}>
@@ -361,11 +371,10 @@ export default function InterviewsPage() {
                 setForm((f) => ({ ...f, applicantId: e.target.value, jobId: app?.jobId || f.jobId }));
               }} style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 14, outline: "none", boxSizing: "border-box" }}>
                 <option value="">-- Select candidate --</option>
-                {shortlisted.map((a) => (
+                {shortlisted.length === 0 ? (
+                  <option disabled>No shortlisted candidates yet — run AI screening first</option>
+                ) : shortlisted.map((a) => (
                   <option key={a._id} value={a._id}>{a.fullName || a.name} ({a.email})</option>
-                ))}
-                {applicants.filter((a) => !shortlisted.includes(a)).map((a) => (
-                  <option key={a._id} value={a._id}>{a.fullName || a.name} — {a.status}</option>
                 ))}
               </select>
               {shortlisted.length > 0 && <div style={{ fontSize: 11, color: "#16a34a", marginTop: 4 }}>Shortlisted candidates shown first</div>}
@@ -437,3 +446,8 @@ export default function InterviewsPage() {
     </div>
   );
 }
+
+
+
+
+

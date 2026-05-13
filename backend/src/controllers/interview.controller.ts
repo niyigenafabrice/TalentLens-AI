@@ -3,6 +3,7 @@ import Interview from "../models/interview.model";
 import Applicant from "../models/applicant.model";
 import Job from "../models/job.model";
 import { sendInterviewInvitationEmail, sendRejectionEmail } from "../email.service";
+import { logActivity } from "../utils/logActivity";
 
 export const scheduleInterview = async (req: Request, res: Response) => {
   try {
@@ -52,6 +53,15 @@ export const scheduleInterview = async (req: Request, res: Response) => {
       console.error("Email send failed (interview still saved):", emailError);
     }
 
+    if (applicant && job) {
+      await logActivity(
+        "Interview scheduled",
+        "interview",
+        `Interview scheduled for ${applicant.fullName || applicant.name} for ${job.title} on ${interviewData.scheduledDate} at ${interviewData.scheduledTime}`,
+        "calendar",
+        "#7c3aed"
+      );
+    }
     res.status(201).json({
       success: true,
       message: "Interview scheduled and invitation email sent!",
@@ -81,8 +91,8 @@ export const getInterviewsByJob = async (req: Request, res: Response) => {
 export const getAllInterviews = async (req: Request, res: Response) => {
   try {
     const interviews = await Interview.find()
-      .populate("applicantId", "name fullName email phone")
-      .populate("jobId", "title department")
+      .populate("applicantId", "name fullName email phone skills yearsOfExperience educationLevel")
+      .populate("jobId", "title department location")
       .sort({ scheduledDate: 1 });
 
     const mapped = interviews.map((iv: any) => ({
@@ -162,3 +172,5 @@ export const rejectApplicant = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "Failed to reject applicant", error: error.message });
   }
 };
+
+

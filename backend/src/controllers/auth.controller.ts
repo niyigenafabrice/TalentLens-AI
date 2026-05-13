@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model";
 import dotenv from "dotenv";
@@ -123,5 +123,52 @@ export const getMe = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ success: false, message: "Failed to get user", error });
+  }
+};
+
+// Accept invite and set password
+export const acceptInvite = async (req: Request, res: Response) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      res.status(400).json({ success: false, message: "Token and password are required" });
+      return;
+    }
+
+    // Verify the token
+    let payload: any;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET || "secret");
+    } catch {
+      res.status(400).json({ success: false, message: "Invalid or expired invite link" });
+      return;
+    }
+
+    const { email, name, role } = payload;
+
+    // Check if user already exists
+    const existing = await User.findOne({ email });
+    if (existing) {
+      res.status(400).json({ success: false, message: "Account already activated. Please login." });
+      return;
+    }
+
+    // Hash password and create user
+    const bcrypt = await import("bcryptjs");
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      isActive: true,
+    });
+
+    await user.save();
+
+    res.status(201).json({ success: true, message: "Account activated successfully! You can now login." });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: "Failed to activate account", error: error.message });
   }
 };

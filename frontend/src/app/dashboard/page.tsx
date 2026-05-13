@@ -19,6 +19,8 @@ export default function Home() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [applicants, setApplicants] = useState<any[]>([]);
   const [interviews, setInterviews] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState("");
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -26,14 +28,16 @@ export default function Home() {
     if (stored) setUser(JSON.parse(stored));
     const fetchData = async () => {
       try {
-        const [jobsRes, applicantsRes, interviewsRes] = await Promise.all([
+        const [jobsRes, applicantsRes, interviewsRes, activitiesRes] = await Promise.all([
           axios.get(API + "/jobs"),
           axios.get(API + "/applicants"),
           axios.get(API + "/interviews"),
+          axios.get(API + "/activities/recent?limit=10"),
         ]);
         setJobs(jobsRes.data.data || []);
         setApplicants(applicantsRes.data.data || []);
         setInterviews(interviewsRes.data.data || []);
+        setActivities(activitiesRes.data.data || []);
       } catch (e) {
         console.error(e);
       }
@@ -41,13 +45,14 @@ export default function Home() {
     fetchData();
   }, []);
 
-  const screened = applicants.filter((a) => a.aiScore);
-  const shortlisted = applicants.filter((a) => a.status === "shortlisted").length;
-  const rejected = applicants.filter((a) => a.status === "rejected").length;
-  const hired = applicants.filter((a) => a.status === "hired" || a.status === "accepted").length;
+  const filteredApplicants = selectedJobId ? applicants.filter((a) => String(a.jobId) === selectedJobId) : applicants;
+  const screened = filteredApplicants.filter((a) => a.aiScore);
+  const shortlisted = filteredApplicants.filter((a) => a.status === "shortlisted").length;
+  const rejected = filteredApplicants.filter((a) => a.status === "rejected").length;
+  const hired = filteredApplicants.filter((a) => a.status === "hired" || a.status === "accepted").length;
   const avgScore = screened.length > 0 ? Math.round(screened.reduce((s: number, a: any) => s + a.aiScore, 0) / screened.length) : 0;
   const topCandidates = [...screened].sort((a, b) => b.aiScore - a.aiScore).slice(0, 5);
-  const recentApplicants = [...applicants].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 5);
+  const recentApplicants = [...filteredApplicants].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 5);
 
   // Applications per day (last 7 days)
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -57,13 +62,14 @@ export default function Home() {
   });
   const appsByDay = last7Days.map((day) => ({
     day: new Date(day).toLocaleDateString("en-US", { weekday: "short" }),
-    count: applicants.filter((a) => (a.createdAt || "").startsWith(day)).length,
+    count: filteredApplicants.filter((a) => (a.createdAt || "").startsWith(day)).length,
   }));
   const maxDayCount = Math.max(...appsByDay.map((d) => d.count), 1);
 
   // Status donut chart
   const statusData = [
-    { label: "Submitted", count: applicants.filter((a) => a.status === "submitted").length, color: "#1d4ed8" },
+    { label: "Submitted", count: filteredApplicants.filter((a) => a.status === "submitted").length, color: "#1d4ed8" },
+    { label: "Screening", count: filteredApplicants.filter((a) => a.status === "screening").length, color: "#0891b2" },
     { label: "Shortlisted", count: shortlisted, color: "#16a34a" },
     { label: "Rejected", count: rejected, color: "#dc2626" },
     { label: "Hired", count: hired, color: "#7c3aed" },
@@ -86,7 +92,7 @@ export default function Home() {
 
   // Top skills
   const skillCounts: { [key: string]: number } = {};
-  applicants.forEach((a) => {
+  filteredApplicants.forEach((a) => {
     (a.skills || []).forEach((skill: string) => {
       skillCounts[skill] = (skillCounts[skill] || 0) + 1;
     });
@@ -99,7 +105,7 @@ export default function Home() {
 
   // Funnel data
   const funnelStages = [
-    { label: "Applied", count: applicants.length, color: "#1d4ed8" },
+    { label: "Applied", count: filteredApplicants.length, color: "#1d4ed8" },
     { label: "Screened", count: screened.length, color: "#7c3aed" },
     { label: "Shortlisted", count: shortlisted, color: "#0891b2" },
     { label: "Interviewed", count: interviews.length, color: "#ca8a04" },
@@ -109,7 +115,7 @@ export default function Home() {
 
   const statCards = [
     { label: "Total Jobs", value: jobs.length, color: "#1d4ed8", bg: "#eff6ff" },
-    { label: "Total Applicants", value: applicants.length, color: "#7c3aed", bg: "#f5f3ff" },
+    { label: "Total Applicants", value: filteredApplicants.length, color: "#7c3aed", bg: "#f5f3ff" },
     { label: "AI Screened", value: screened.length, color: "#0891b2", bg: "#ecfeff" },
     { label: "Shortlisted", value: shortlisted, color: "#16a34a", bg: "#dcfce7" },
     { label: "Interviews", value: interviews.length, color: "#ca8a04", bg: "#fef9c3" },
@@ -166,9 +172,42 @@ export default function Home() {
             <h1 style={{ fontSize: 26, fontWeight: 900, color: "#0f172a", margin: 0 }}>Dashboard</h1>
             <p style={{ color: "#64748b", margin: "4px 0 0", fontSize: 14 }}>Welcome back, {user?.name || "Admin"}!</p>
           </div>
-          <div style={{ background: "white", borderRadius: 10, padding: "8px 16px", border: "1px solid #e2e8f0", fontSize: 13, color: "#64748b", fontWeight: 600 }}>
-            {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ background: "white", borderRadius: 10, padding: "9px 16px", border: "1px solid #e2e8f0", fontSize: 13, color: "#64748b", fontWeight: 600 }}>
+              {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+            </div>
           </div>
+        </div>
+
+        {/* Job Filter Cards */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+          <button
+            onClick={() => setSelectedJobId("")}
+            style={{ padding: "10px 20px", borderRadius: 20, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13,
+              background: selectedJobId === "" ? "#1d4ed8" : "white",
+              color: selectedJobId === "" ? "white" : "#64748b",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}
+          >
+            All Jobs ({applicants.length})
+          </button>
+          {jobs.map((j) => {
+            const count = applicants.filter((a) => {
+              const id = a.jobId?.$oid || a.jobId?._id || String(a.jobId);
+              return id === j._id;
+            }).length;
+            return (
+              <button
+                key={j._id}
+                onClick={() => setSelectedJobId(j._id)}
+                style={{ padding: "10px 20px", borderRadius: 20, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13,
+                  background: selectedJobId === j._id ? "#1d4ed8" : "white",
+                  color: selectedJobId === j._id ? "white" : "#64748b",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}
+              >
+                {j.title} ({count})
+              </button>
+            );
+          })}
         </div>
 
         {/* Stat Cards */}
@@ -233,7 +272,7 @@ export default function Home() {
                         style={{ transition: "stroke-dasharray 0.5s ease" }}
                       />
                     ))}
-                    <text x={cx} y={cy - 6} textAnchor="middle" fontSize="20" fontWeight="900" fill="#0f172a">{applicants.length}</text>
+                    <text x={cx} y={cy - 6} textAnchor="middle" fontSize="20" fontWeight="900" fill="#0f172a">{filteredApplicants.length}</text>
                     <text x={cx} y={cy + 14} textAnchor="middle" fontSize="10" fill="#94a3b8">Total</text>
                   </svg>
                 </div>
@@ -371,3 +410,14 @@ export default function Home() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+

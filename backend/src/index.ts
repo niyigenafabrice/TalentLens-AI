@@ -16,6 +16,7 @@ import noteRoutes from "./routes/note.routes";
 import activityRoutes from "./routes/activity.routes";
 import jobStatsRoutes from "./routes/jobStats.routes";
 import cvRoutes from "./routes/cv.routes";
+import inviteRoutes from "./routes/invite.routes";
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use("/api/notes", noteRoutes);
 app.use("/api/activities", activityRoutes);
 app.use("/api/job-stats", jobStatsRoutes);
 app.use("/api/cv", cvRoutes);
+app.use("/api/invite", inviteRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "TalentLens AI Backend is Running!" });
@@ -56,5 +58,6 @@ const startServer = async () => {
 };
 
 startServer();
+
 
 

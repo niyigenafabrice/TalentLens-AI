@@ -1,4 +1,6 @@
+﻿import jwt from "jsonwebtoken";
 import { Request, Response } from "express";
+import { logActivity } from "../utils/logActivity";
 import Applicant from "../models/applicant.model";
 import { sendNewApplicantEmail, sendShortlistEmail } from "../email.service";
 import Job from "../models/job.model";
@@ -62,7 +64,8 @@ export const getApplicantsByJob = async (req: Request, res: Response) => {
 export const getMyApplication = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    const application = await Applicant.findOne({ userId })
+    const applicantId = (req as any).applicantId;
+    const application = await Applicant.findOne(applicantId ? { _id: applicantId } : { userId })
       .populate("jobId", "title department")
       .sort({ createdAt: -1 });
 
@@ -183,3 +186,19 @@ export const searchApplicants = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "Search failed", error });
   }
 };
+
+// Applicant self-lookup by email (no password needed — email = identity)
+export const applicantLogin = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) { res.status(400).json({ success: false, message: "Email is required" }); return; }
+    const application = await Applicant.findOne({ email: email.toLowerCase().trim() }).sort({ createdAt: -1 }).populate("jobId", "title");
+    if (!application) { res.status(404).json({ success: false, message: "No application found with this email" }); return; }
+    const token = jwt.sign({ id: application._id, email: application.email, role: "applicant" }, process.env.JWT_SECRET || "secret", { expiresIn: "7d" });
+    res.status(200).json({ success: true, token, data: { _id: application._id, name: application.name || application.fullName, email: application.email, role: "applicant" } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Login failed", error });
+  }
+};
+
+
