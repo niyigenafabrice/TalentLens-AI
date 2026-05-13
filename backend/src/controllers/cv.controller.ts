@@ -1,5 +1,5 @@
 ﻿import { Request, Response } from "express";
-import pdfParse from "pdf-parse";
+const pdfParse = require("pdf-parse");
 import Groq from "groq-sdk";
 import dotenv from "dotenv";
 dotenv.config();
@@ -82,3 +82,4 @@ Rules:
     });
   }
 };
+

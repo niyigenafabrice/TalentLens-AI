@@ -53,11 +53,13 @@ export const scheduleInterview = async (req: Request, res: Response) => {
       console.error("Email send failed (interview still saved):", emailError);
     }
 
-    if (applicant && job) {
+    const scheduledApplicant = await Applicant.findById(interviewData.applicantId);
+    const scheduledJob = await Job.findById(interviewData.jobId);
+    if (scheduledApplicant && scheduledJob) {
       await logActivity(
         "Interview scheduled",
         "interview",
-        `Interview scheduled for ${applicant.fullName || applicant.name} for ${job.title} on ${interviewData.scheduledDate} at ${interviewData.scheduledTime}`,
+        `Interview scheduled for ${scheduledApplicant.fullName || scheduledApplicant.name} for ${scheduledJob.title} on ${interviewData.scheduledDate} at ${interviewData.scheduledTime}`,
         "calendar",
         "#7c3aed"
       );
@@ -172,5 +174,6 @@ export const rejectApplicant = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "Failed to reject applicant", error: error.message });
   }
 };
+
 
 
